@@ -14,7 +14,26 @@ const config = {
         trustServerCertificate: true,
     },
 };
+// #Conexão banco de testes
+// # conexao = (
+// #     "mssql+pyodbc:///?odbc_connect=" + 
+// #     "DRIVER={ODBC Driver 17 for SQL Server};" +
+// #     "SERVER=192.168.1.137;" +
+// #     "DATABASE=SOUTTOMAYOR;" +
+// #     "UID=Sa;" +
+// #     "PWD=P@ssw0rd2023"
+// # )
 
+// const config = {
+//   user: "Sa",
+//   password: "P@ssw0rd2023",
+//   server: "192.168.1.137", // ou '127.0.0.1'
+//   database: "SOUTTOMAYOR",
+//   options: {
+//     encrypt: false, // usar true se estiver acessando remotamente com SSL
+//     trustServerCertificate: true, // necessário em ambiente local
+//   },
+// };
 
 (async () => {
   try {
@@ -33,6 +52,7 @@ app.get('/documentos-movimentos', async (req, res) => {
       SELECT 
     T1.PK_DOCTOPED,
     T1.TPDOCTO,
+    T1.DOCUMENTO,
     T1.NOME,
     T1.DTPREVISAO,
     T2.RDX_DOCTOPED,
@@ -69,3 +89,6 @@ ORDER BY T1.PK_DOCTOPED DESC
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+// http://localhost:3000/users?limit=3&o=desc
+// SELECT * FROM NewTable where data between 20240201 and 20250301
+//join
