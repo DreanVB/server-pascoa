@@ -78,6 +78,67 @@ ORDER BY T1.PK_DOCTOPED DESC
   }
 });
 
+app.get('/busca-mc', async (req, res) => {
+  const { startDate, endDate } = req.query;
+  try {
+    const queryDia = await sql.query`
+      SELECT D.PK_DOCTOPED, D.TPDOCTO, D.DOCUMENTO, D.NOME, 
+             MAX(D.DTEVENTO) AS DTEVENTO, 
+             MAX(D.DTPREVISAO) AS DTPREVISAO, 
+             OP.HORAPREVISAO, OP.SITUACAO 
+      FROM TPAOP AS OP 
+      INNER JOIN TPAOPDOCTOPED AS OPDOCTO ON OP.PK_OP = OPDOCTO.RDX_OP
+      INNER JOIN TPADOCTOPED AS D ON OPDOCTO.IDX_DOCTOPED = D.PK_DOCTOPED
+      WHERE 
+        (D.TPDOCTO = 'OR' AND D.SITUACAO IN ('V', 'B') 
+        AND CAST(D.DTEVENTO AS DATE) BETWEEN ${startDate} AND ${endDate})
+        AND OP.SITUACAO != 'U'
+        OR (D.TPDOCTO = 'EC' AND D.SITUACAO IN ('Z', 'B') 
+        AND CAST(D.DTPREVISAO AS DATE) BETWEEN ${startDate} AND ${endDate} 
+        AND OP.SITUACAO != 'U')
+      GROUP BY D.PK_DOCTOPED, D.TPDOCTO, D.DOCUMENTO, D.NOME, 
+               D.DTEVENTO, D.DTPREVISAO, OP.HORAPREVISAO, OP.SITUACAO
+      ORDER BY OP.HORAPREVISAO`;
+
+    const queryHoras = await sql.query`
+      SELECT D.PK_DOCTOPED, D.DOCUMENTO, D.NOME, D.DTEVENTO, 
+             D.DTPREVISAO AS DATA_FINAL, D.HORAPREVISAO, 
+             OP.HORAPREVISAO, OP.SITUACAO 
+      FROM TPAOP AS OP 
+      INNER JOIN TPAOPDOCTOPED AS OPDOCTO ON OP.PK_OP = OPDOCTO.RDX_OP
+      INNER JOIN TPADOCTOPED AS D ON OPDOCTO.IDX_DOCTOPED = D.PK_DOCTOPED
+      WHERE 
+        (D.TPDOCTO = 'OR' AND CAST(D.DTEVENTO AS DATE) BETWEEN ${startDate} AND ${endDate})
+        OR (D.TPDOCTO = 'EC' AND CAST(D.DTPREVISAO AS DATE) BETWEEN ${startDate} AND ${endDate})
+        AND OP.SITUACAO != 'U'
+      ORDER BY OP.HORAPREVISAO`;
+
+    const queryProdutos = await sql.query`
+      SELECT MOVTO.DESCRICAO, DOC.TPDOCTO, DOC.DOCUMENTO, OPPROD.QUANTIDADE, 
+             OP.HORAPREVISAO, OP.DTPREVISAO, OPPROD.SITUACAO, PROD.IDX_LINHA
+      FROM TPAOPPROD AS OPPROD
+      INNER JOIN TPAOP AS OP ON OPPROD.RDX_OP = OP.PK_OP
+      INNER JOIN TPAMOVTOPED AS MOVTO ON OPPROD.IDX_MOVTOPED = MOVTO.PK_MOVTOPED
+      INNER JOIN TPADOCTOPED AS DOC ON MOVTO.RDX_DOCTOPED = DOC.PK_DOCTOPED
+      INNER JOIN TPAPRODUTO AS PROD ON MOVTO.CODPRODUTO = PROD.CODPRODUTO
+      WHERE 
+        (DOC.TPDOCTO = 'OR' OR DOC.TPDOCTO = 'EC' OR DOC.TPDOCTO = 'PP')
+        AND CAST(OP.DTPREVISAO AS DATE) BETWEEN ${startDate} AND ${endDate}
+        AND OPPROD.SITUACAO != 'U'
+      ORDER BY OP.DTPREVISAO`;
+
+    res.json({
+      day: queryDia.recordset,
+      hours: queryHoras.recordset,
+      products: queryProdutos.recordset
+    });
+    
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao buscar dados');
+  }
+});
+
 
 
 
