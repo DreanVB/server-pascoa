@@ -14,6 +14,11 @@ const config = {
         trustServerCertificate: true,
     },
 };
+
+app.get('/healthcheck', (req, res) => {
+  res.sendStatus(200);
+});
+
 // #Conexão banco de testes
 // # conexao = (
 // #     "mssql+pyodbc:///?odbc_connect=" + 
@@ -136,6 +141,113 @@ app.get('/busca-mc', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao buscar dados');
+  }
+});
+
+app.get('/produtos-pendentes', async (req, res) => {
+    const { startDate, endDate } = req.query;
+
+ 
+  try {
+    // Consulta SQL com JOINs adicionais na tabela TPAAJUSTEPED e TPAAJUSTEPEDITEM
+    const products = await sql.query(`SELECT
+    MOVTO.DESCRICAO,
+    DOC.TPDOCTO,
+    DOC.DOCUMENTO,
+    OPPROD.QUANTIDADE,
+    OPPROD.UNIDADE,
+    OP.HORAPREVISAO,
+    OP.DTPREVISAO, 
+    OPPROD.SITUACAO, 
+    PROD.IDX_LINHA,
+    CASE 
+        WHEN T4.SITUACAO = 'V' THEN T5.QUANTIDADE
+        ELSE NULL
+    END AS QUANTIDADE,
+    T5.QTORIGINAL
+FROM TPAOPPROD AS OPPROD
+    INNER JOIN TPAOP AS OP ON OPPROD.RDX_OP = OP.PK_OP
+    INNER JOIN TPAMOVTOPED AS MOVTO ON OPPROD.IDX_MOVTOPED = MOVTO.PK_MOVTOPED
+    INNER JOIN TPADOCTOPED AS DOC ON MOVTO.RDX_DOCTOPED = DOC.PK_DOCTOPED
+    INNER JOIN TPAPRODUTO AS PROD ON MOVTO.CODPRODUTO = PROD.CODPRODUTO
+    LEFT JOIN TPAAJUSTEPEDITEM T5 ON T5.IDX_MOVTOPED = MOVTO.PK_MOVTOPED
+    LEFT JOIN TPAAJUSTEPED AS T4 ON T5.RDX_AJUSTEPED = T4.PK_AJUSTEPED
+WHERE 
+    DOC.TPDOCTO IN ('OR', 'EC', 'PP')
+    AND CAST(OP.DTPREVISAO AS DATE) BETWEEN '${startDate}' AND '${endDate}'
+    AND OPPROD.SITUACAO != 'U'
+ORDER BY 
+    OP.DTPREVISAO DESC
+
+    `);
+
+    res.json(products.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(`<p>Erro: ${err.message}</p>`);
+  }
+});
+
+
+app.get('/produtos-baixados', async (req, res) => {
+    const { startDate, endDate } = req.query;
+
+ 
+  try {
+    // Consulta SQL com JOINs adicionais na tabela TPAAJUSTEPED e TPAAJUSTEPEDITEM
+    const products = await sql.query(`
+      -- Subquery: peso unitário da composição por produto
+WITH PESO_UNITARIO AS (
+    SELECT 
+        COMP.RDX_PRODUTO AS PK_PRODUTO,
+        SUM(
+            CASE 
+                WHEN UPPER(COMP.UN) = 'KG' THEN COMP.QUANTIDADE * 1000
+                WHEN UPPER(COMP.UN) = 'LT' THEN COMP.QUANTIDADE * 1000
+                WHEN UPPER(COMP.UN) IN ('GR', 'ML') THEN COMP.QUANTIDADE
+                ELSE 0
+            END
+        ) AS PESO_UNITARIO
+    FROM TPAPRODCOMPOSICAO AS COMP
+    GROUP BY COMP.RDX_PRODUTO
+)
+
+SELECT 
+    P.CODPRODUTO, 
+    M.DESCRICAO, 
+    P.PESOKG, 
+    M.UNIDADE, 
+    P.IDX_NEGOCIO, 
+    P.IDX_LINHA,  
+    SUM(L_QUANTIDADE) AS QTD_VENDIDA, 
+    SUM(L_PRECOTOTAL) AS VALOR_TOTAL,
+    PU.PESO_UNITARIO
+FROM TPAMOVTOPED AS M
+    INNER JOIN TPADOCTOPED AS D ON D.PK_DOCTOPED = M.RDX_DOCTOPED
+    INNER JOIN TPAPRODUTO AS P ON P.PK_PRODUTO = M.IDX_PRODUTO
+    INNER JOIN TPAOPPROD AS OP ON OP.IDX_MOVTOPED = M.PK_MOVTOPED
+    LEFT JOIN PESO_UNITARIO AS PU ON PU.PK_PRODUTO = P.PK_PRODUTO
+WHERE 
+    D.TPDOCTO IN ('OR', 'EC')
+    AND P.IDX_NEGOCIO IN ('Produtos acabados', 'Desativados')
+    AND D.SITUACAO IN ('Z', 'B', 'V')
+    AND OP.DTEXECUCAO BETWEEN '${startDate}' AND '${endDate}'
+    AND P.CODPRODUTO <> '006'
+GROUP BY 
+    P.CODPRODUTO, 
+    P.PESOKG,
+    M.DESCRICAO, 
+    M.UNIDADE, 
+    P.IDX_NEGOCIO, 
+    P.IDX_LINHA,
+    PU.PESO_UNITARIO
+  order by DESCRICAO
+    `);
+
+    res.json(products.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(`<p>Erro: ${err.message}</p>`);
   }
 });
 
