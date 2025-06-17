@@ -273,7 +273,15 @@ GROUP BY
   }
 });
 
-
+app.get('/api/produtos', async (req, res) => {
+  try {
+    await sql.connect(config);
+    const result = await sql.query("select DESCRICAO, VALIDADE, TPVALIDADE from TPAPRODUTO where IDX_NEGOCIO = 'Produtos acabados' ORDER BY DESCRICAO");
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 
