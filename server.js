@@ -284,6 +284,144 @@ app.get('/api/produtos', async (req, res) => {
   }
 });
 
+app.get('/nota', async (req, res) => {
+  const { documentos } = req.query;
+
+  try {
+    // Verifica se documentos está presente e transforma em array
+    if (!documentos) {
+      return res.status(400).json({ error: 'Parâmetro "documentos" é obrigatório' });
+    }
+
+    const docList = documentos.split(',').map(id => parseInt(id.trim())).filter(Boolean);
+
+    if (docList.length === 0) {
+      return res.status(400).json({ error: 'Lista de documentos inválida' });
+    }
+
+    // Gera placeholders e parâmetros
+    const placeholders = docList.map((_, i) => `@doc${i}`).join(', ');
+    const inputParams = docList.map((val, i) => ({ name: `doc${i}`, type: sql.Int, value: val }));
+
+    // Monta query com placeholders
+    let query = `
+        -- Parte 1: Detalhes por produto (acabados/desativados)
+SELECT 
+    ci.CODPRODUTO,
+    ci.DESCRICAO,
+    ci.UNIDADE,
+    SUM(ci.L_QUANTIDADE) AS TOTAL_QUANTIDADE,
+    SUM(ci.L_PRECOTOTAL) AS TOTAL_PRECO,
+    p.IDX_NEGOCIO,
+    NULL AS TOTALDOCTO,
+    0 AS ORDENADOR
+FROM [SOUTTOMAYOR].[dbo].[TPACONTRATOITEM] ci
+JOIN TPADOCTOPED dc ON dc.IDX_CONTRATOMOV = ci.RDX_CONTRATOMOV
+JOIN TPAPRODUTO p ON p.PK_PRODUTO = ci.IDX_PRODUTO
+WHERE dc.PK_DOCTOPED IN (${placeholders})
+  AND p.IDX_NEGOCIO IN ('Produtos acabados','Desativados')
+GROUP BY 
+    ci.CODPRODUTO, ci.DESCRICAO, ci.UNIDADE, p.IDX_NEGOCIO
+
+UNION ALL
+
+-- Parte 2: Totais por negócio (exceto acabados/desativados)
+SELECT 
+    NULL AS CODPRODUTO,
+    NULL AS DESCRICAO,
+    NULL AS UNIDADE,
+    SUM(ci.L_QUANTIDADE) AS TOTAL_QUANTIDADE,
+    SUM(ci.L_PRECOTOTAL) AS TOTAL_PRECO,
+    p.IDX_NEGOCIO,
+    NULL AS TOTALDOCTO,
+    0 AS ORDENADOR
+FROM [SOUTTOMAYOR].[dbo].[TPACONTRATOITEM] ci
+JOIN TPADOCTOPED dc ON dc.IDX_CONTRATOMOV = ci.RDX_CONTRATOMOV
+JOIN TPAPRODUTO p ON p.PK_PRODUTO = ci.IDX_PRODUTO
+WHERE dc.PK_DOCTOPED IN (${placeholders})
+  AND p.IDX_NEGOCIO NOT IN ('Produtos acabados','Desativados')
+GROUP BY 
+    p.IDX_NEGOCIO
+
+UNION ALL
+
+-- Parte 3: Total Geral com totaldocto somado 1x por PK_DOCTOPED
+SELECT
+    NULL AS CODPRODUTO,
+    'TOTAL GERAL' AS DESCRICAO,
+    NULL AS UNIDADE,
+    SUM(ci.L_QUANTIDADE) AS TOTAL_QUANTIDADE,
+    SUM(ci.L_PRECOTOTAL) AS TOTAL_PRECO,
+    NULL AS IDX_NEGOCIO,
+    (
+        SELECT SUM(DISTINCT D.TOTALDOCTO)
+        FROM [SOUTTOMAYOR].[dbo].[TPADOCTOPED] D
+        WHERE D.PK_DOCTOPED IN (${placeholders})
+    ) AS TOTALDOCTO,
+    1 AS ORDENADOR
+FROM [SOUTTOMAYOR].[dbo].[TPACONTRATOITEM] ci
+JOIN TPADOCTOPED dc ON dc.IDX_CONTRATOMOV = ci.RDX_CONTRATOMOV
+WHERE dc.PK_DOCTOPED IN (${placeholders})
+
+ORDER BY 
+    ORDENADOR,
+    DESCRICAO;
+
+    `;
+
+    // Executa com parâmetros seguros
+    const request = new sql.Request();
+    inputParams.forEach(param => {
+      request.input(param.name, param.type, param.value);
+    });
+
+    const products = await request.query(query);
+    res.json(products.recordset);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(`<p>Erro: ${err.message}</p>`);
+  }
+});
+
+app.get('/buscar-doc', async (req, res) => {
+  const { documento } = req.query;
+
+  try {
+    if (!documento) {
+      return res.status(400).json({ error: 'Parâmetro "documento" é obrigatório' });
+    }
+
+    // Cria e configura a consulta com parâmetros
+    const query = `
+      SELECT
+         [PK_DOCTOPED],
+         [DOCUMENTO],
+         [DTEVENTO],
+         [NOME],
+         [CNPJCPF],
+         [CIDADE],
+         [UF],
+         [IDX_MOEDA],
+         [TOTALDOCTO]
+      FROM [SOUTTOMAYOR].[dbo].[TPADOCTOPED]
+      WHERE TPDOCTO = 'OR'
+        AND SITUACAO IN ('V','B')
+        AND DOCUMENTO = @documento
+    `;
+
+    const request = new sql.Request();
+    request.input('documento', sql.VarChar, documento);  // Use o tipo apropriado conforme o banco
+
+    const result = await request.query(query);
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.error('Erro ao buscar documento:', err);
+    res.status(500).send(`<p>Erro interno: ${err.message}</p>`);
+  }
+});
+
 
 
   
