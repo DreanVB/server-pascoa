@@ -16,5 +16,11 @@
     "url": "https://github.com/DreanVB/server-pascoa/issues"
   },
   "homepage": "https://github.com/DreanVB/server-pascoa#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "mssql": "^11.0.1",
+    "sqlite3": "^5.1.7"
+  }
 }

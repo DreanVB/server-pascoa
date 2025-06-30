@@ -1,7 +1,8 @@
 const express = require('express')
 const app = express()
-const port = 4000
+const port = 4002
 const sql = require("mssql");
+const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 app.use(cors());
 const config = {
@@ -14,6 +15,14 @@ const config = {
         trustServerCertificate: true,
     },
 };
+const db = new sqlite3.Database('etiquetas.db', (err) => {
+  if (err) {
+    console.error('Erro ao conectar ao SQLite:', err.message);
+  } else {
+    console.log('✅ Conectado ao banco SQLite');
+  }
+});
+
 
 app.get('/healthcheck', (req, res) => {
   res.sendStatus(200);
@@ -420,6 +429,135 @@ app.get('/buscar-doc', async (req, res) => {
     console.error('Erro ao buscar documento:', err);
     res.status(500).send(`<p>Erro interno: ${err.message}</p>`);
   }
+});
+
+app.get('/etiquetas', (req, res) => {
+  db.all('SELECT * FROM etiquetas', [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ etiquetas: rows });
+  });
+});
+
+// Rota GET: Buscar um produto específico por ID
+app.get('/etiquetas/:id', (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT * FROM etiquetas WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (!row) {
+      res.status(404).json({ error: 'Produto não encontrado' });
+      return;
+    }
+    res.json(row);
+  });
+});
+
+// Rota POST: Criar um novo produto
+app.post('/etiquetas', (req, res) => {
+  const {
+    produto, porcao, caseira, energia100g, energiag, energiaVD, carb100g, carbg, carbVD,
+    acucar100g, acucarg, acucarVD, acucarad100g, acucaradg, acucaradVD,
+    proteina100g, proteinag, proteinaVD, gorduraTotal100g, gorduraTotalg,
+    gorduraTotalVD, gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD,
+    gorduraTrans100g, gorduraTransg, gorduraTransVD, fibra100g, fibrag,
+    fibraVD, sodio100g, sodiog, sodioVD, ingredientes, glutem, armazenamento,
+    quantidade, valorQuant, valorTotal, validade, alergenicos,
+    valoresReferencia
+  } = req.body;
+
+  // Remover a coluna 'fabricacao' da consulta SQL de inserção
+  const stmt = db.prepare(`
+    INSERT INTO etiquetas (
+      produto, porcao, caseira, energia100g, energiag, energiaVD, carb100g, carbg, carbVD,
+      acucar100g, acucarg, acucarVD, acucarad100g, acucaradg, acucaradVD, proteina100g,
+      proteinag, proteinaVD, gorduraTotal100g, gorduraTotalg, gorduraTotalVD,
+      gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD, gorduraTrans100g,
+      gorduraTransg, gorduraTransVD, fibra100g, fibrag, fibraVD, sodio100g, sodiog,
+      sodioVD, ingredientes, glutem, armazenamento, quantidade, valorQuant, valorTotal,
+      validade, alergenicos, valoresReferencia
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `);
+
+  stmt.run(
+    produto, porcao, caseira, energia100g, energiag, energiaVD, carb100g, carbg, carbVD,
+    acucar100g, acucarg, acucarVD, acucarad100g, acucaradg, acucaradVD, proteina100g,
+    proteinag, proteinaVD, gorduraTotal100g, gorduraTotalg, gorduraTotalVD,
+    gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD, gorduraTrans100g,
+    gorduraTransg, gorduraTransVD, fibra100g, fibrag, fibraVD, sodio100g, sodiog,
+    sodioVD, ingredientes, glutem, armazenamento, quantidade, valorQuant, valorTotal,
+    validade,alergenicos, valoresReferencia
+  );
+
+  stmt.finalize();
+
+  res.status(201).json({ message: 'Produto criado com sucesso!' });
+});
+
+
+
+// Rota PUT: Atualizar um produto específico por ID
+app.put('/etiquetas/:id', (req, res) => {
+  const { id } = req.params;
+  const {
+    produto, porcao, caseira, energia100g, energiag, energiaVD,
+    carb100g, carbg, carbVD, acucar100g, acucarg, acucarVD,
+    acucarad100g, acucaradg, acucaradVD, proteina100g, proteinag,
+    proteinaVD, gorduraTotal100g, gorduraTotalg, gorduraTotalVD,
+    gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD,
+    gorduraTrans100g, gorduraTransg, gorduraTransVD, fibra100g,
+    fibrag, fibraVD, sodio100g, sodiog, sodioVD, ingredientes,
+    glutem, armazenamento, quantidade, valorQuant, valorTotal, validade, alergenicos, valoresReferencia
+  } = req.body;
+
+  const query = `UPDATE etiquetas SET 
+    produto = ?, porcao = ?, caseira = ?, energia100g = ?, energiag = ?, energiaVD = ?,
+    carb100g = ?, carbg = ?, carbVD = ?, acucar100g = ?, acucarg = ?, acucarVD = ?,
+    acucarad100g = ?, acucaradg = ?, acucaradVD = ?, proteina100g = ?, proteinag = ?,
+    proteinaVD = ?, gorduraTotal100g = ?, gorduraTotalg = ?, gorduraTotalVD = ?,
+    gorduraSaturada100g = ?, gorduraSaturadag = ?, gorduraSaturadaVD = ?,
+    gorduraTrans100g = ?, gorduraTransg = ?, gorduraTransVD = ?, fibra100g = ?,
+    fibrag = ?, fibraVD = ?, sodio100g = ?, sodiog = ?, sodioVD = ?, ingredientes = ?,
+    glutem = ?, armazenamento = ?, quantidade = ?, valorQuant = ?, valorTotal = ?, validade = ?, alergenicos = ?, valoresReferencia = ?
+  WHERE id = ?`;
+
+  db.run(query, [
+    produto, porcao, caseira, energia100g, energiag, energiaVD,
+    carb100g, carbg, carbVD, acucar100g, acucarg, acucarVD,
+    acucarad100g, acucaradg, acucaradVD, proteina100g, proteinag,
+    proteinaVD, gorduraTotal100g, gorduraTotalg, gorduraTotalVD,
+    gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD,
+    gorduraTrans100g, gorduraTransg, gorduraTransVD, fibra100g,
+    fibrag, fibraVD, sodio100g, sodiog, sodioVD, ingredientes,
+    glutem, armazenamento, quantidade, valorQuant, valorTotal, validade, alergenicos, valoresReferencia, id
+  ], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.status(200).json({ updatedID: id });
+  });
+});
+
+// Rota DELETE: Excluir um produto por ID
+app.delete('/etiquetas/:id', (req, res) => {
+  const { id } = req.params;
+
+  db.run('DELETE FROM etiquetas WHERE id = ?', [id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (this.changes === 0) {
+      res.status(404).json({ error: 'Produto não encontrado' });
+      return;
+    }
+    res.status(200).json({ deletedID: id });
+  });
 });
 
 
