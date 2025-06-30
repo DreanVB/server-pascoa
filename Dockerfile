@@ -3,16 +3,18 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /usr/src/app
 
-# Install needed build tools for native modules (like mssql)
-RUN apk add --no-cache python3 make g++ \
-  && npm install express mssql cors \
-  && apk del python3 make g++  # clean up after install
+# Instala ferramentas de build e pacotes necessários para sqlite3
+RUN apk add --no-cache python3 make g++ sqlite sqlite-dev
 
-# Copy your server file
-COPY server.js .
+# Copia package.json e instala dependências
+COPY package*.json ./
+RUN npm install
 
-# Expose your app's port
+# Copia o restante da aplicação
+COPY server.js .  # Ou '.' se tiver mais arquivos
+
+# Expor a porta usada pela aplicação
 EXPOSE 4000
 
-# Start the app
+# Comando para iniciar a aplicação
 CMD ["node", "server.js"]
