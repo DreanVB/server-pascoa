@@ -5,6 +5,7 @@ const sql = require("mssql");
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 app.use(cors());
+app.use(express.json());
 const config = {
     user: "Sa",
     password: "P@ssw0rd2023@#$",
