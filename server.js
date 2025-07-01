@@ -4,8 +4,12 @@ const port = 4000
 const sql = require("mssql");
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
+const path = require('path');
+
 app.use(cors());
 app.use(express.json());
+
+
 const config = {
     user: "Sa",
     password: "P@ssw0rd2023@#$",
@@ -560,21 +564,6 @@ app.delete('/etiquetas/:id', (req, res) => {
     res.status(200).json({ deletedID: id });
   });
 });
-
-
-const path = require('path');
-
-// Serve os arquivos estáticos do React (se já fez build)
-app.use(express.static(path.join(__dirname, 'build')));
-
-// Redireciona qualquer rota que não seja API para o index.html do React
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-  
-
-
-
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
