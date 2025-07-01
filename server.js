@@ -1,6 +1,6 @@
 const express = require('express')
 const app = express()
-const port = 4002
+const port = 4000
 const sql = require("mssql");
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -562,7 +562,15 @@ app.delete('/etiquetas/:id', (req, res) => {
 });
 
 
+const path = require('path');
 
+// Serve os arquivos estáticos do React (se já fez build)
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Redireciona qualquer rota que não seja API para o index.html do React
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
   
 
 
