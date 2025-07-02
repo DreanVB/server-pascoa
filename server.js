@@ -472,7 +472,7 @@ app.post('/etiquetas', (req, res) => {
     gorduraTrans100g, gorduraTransg, gorduraTransVD, fibra100g, fibrag,
     fibraVD, sodio100g, sodiog, sodioVD, ingredientes, glutem, armazenamento,
     quantidade, valorQuant, valorTotal, validade, alergenicos,
-    valoresReferencia
+    valoresReferencia, lactose
   } = req.body;
 
   // Remover a coluna 'fabricacao' da consulta SQL de inserção
@@ -484,8 +484,8 @@ app.post('/etiquetas', (req, res) => {
       gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD, gorduraTrans100g,
       gorduraTransg, gorduraTransVD, fibra100g, fibrag, fibraVD, sodio100g, sodiog,
       sodioVD, ingredientes, glutem, armazenamento, quantidade, valorQuant, valorTotal,
-      validade, alergenicos, valoresReferencia
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      validade, alergenicos, valoresReferencia, lactose
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
 
   stmt.run(
@@ -495,7 +495,7 @@ app.post('/etiquetas', (req, res) => {
     gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD, gorduraTrans100g,
     gorduraTransg, gorduraTransVD, fibra100g, fibrag, fibraVD, sodio100g, sodiog,
     sodioVD, ingredientes, glutem, armazenamento, quantidade, valorQuant, valorTotal,
-    validade,alergenicos, valoresReferencia
+    validade,alergenicos, valoresReferencia, lactose
   );
 
   stmt.finalize();
@@ -516,7 +516,7 @@ app.put('/etiquetas/:id', (req, res) => {
     gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD,
     gorduraTrans100g, gorduraTransg, gorduraTransVD, fibra100g,
     fibrag, fibraVD, sodio100g, sodiog, sodioVD, ingredientes,
-    glutem, armazenamento, quantidade, valorQuant, valorTotal, validade, alergenicos, valoresReferencia
+    glutem, armazenamento, quantidade, valorQuant, valorTotal, validade, alergenicos, valoresReferencia, lactose
   } = req.body;
 
   const query = `UPDATE etiquetas SET 
@@ -527,7 +527,7 @@ app.put('/etiquetas/:id', (req, res) => {
     gorduraSaturada100g = ?, gorduraSaturadag = ?, gorduraSaturadaVD = ?,
     gorduraTrans100g = ?, gorduraTransg = ?, gorduraTransVD = ?, fibra100g = ?,
     fibrag = ?, fibraVD = ?, sodio100g = ?, sodiog = ?, sodioVD = ?, ingredientes = ?,
-    glutem = ?, armazenamento = ?, quantidade = ?, valorQuant = ?, valorTotal = ?, validade = ?, alergenicos = ?, valoresReferencia = ?
+    glutem = ?, armazenamento = ?, quantidade = ?, valorQuant = ?, valorTotal = ?, validade = ?, alergenicos = ?, valoresReferencia = ?, lactose = ?
   WHERE id = ?`;
 
   db.run(query, [
@@ -538,7 +538,7 @@ app.put('/etiquetas/:id', (req, res) => {
     gorduraSaturada100g, gorduraSaturadag, gorduraSaturadaVD,
     gorduraTrans100g, gorduraTransg, gorduraTransVD, fibra100g,
     fibrag, fibraVD, sodio100g, sodiog, sodioVD, ingredientes,
-    glutem, armazenamento, quantidade, valorQuant, valorTotal, validade, alergenicos, valoresReferencia, id
+    glutem, armazenamento, quantidade, valorQuant, valorTotal, validade, alergenicos, valoresReferencia, lactose, id
   ], function(err) {
     if (err) {
       res.status(500).json({ error: err.message });
