@@ -566,6 +566,48 @@ app.delete('/etiquetas/:id', (req, res) => {
     res.status(200).json({ deletedID: id });
   });
 });
+
+app.get('/planejamento-prod', async (req, res) => {
+  const { startDate, endDate } = req.query;
+
+
+  try {
+    // Consulta SQL com JOINs adicionais na tabela TPAAJUSTEPED e TPAAJUSTEPEDITEM
+    const products = await sql.query(`SELECT 
+    MOVTO.CODPRODUTO,
+    MOVTO.DESCRICAO, 
+    SUM(OPPROD.QUANTIDADE) AS TOTAL_QUANTIDADE,
+	OPPROD.UNIDADE,
+    CAST(OP.DTPREVISAO AS DATE) AS PREVISAO_DATA,
+    PROD.IDX_LINHA
+FROM TPAOPPROD AS OPPROD
+INNER JOIN TPAOP AS OP ON OPPROD.RDX_OP = OP.PK_OP
+INNER JOIN TPAMOVTOPED AS MOVTO ON OPPROD.IDX_MOVTOPED = MOVTO.PK_MOVTOPED
+INNER JOIN TPADOCTOPED AS DOC ON MOVTO.RDX_DOCTOPED = DOC.PK_DOCTOPED
+INNER JOIN TPAPRODUTO AS PROD ON MOVTO.CODPRODUTO = PROD.CODPRODUTO
+WHERE 
+    (DOC.TPDOCTO = 'OR' OR DOC.TPDOCTO = 'EC')
+    AND CAST(OP.DTPREVISAO AS DATE) BETWEEN '${startDate}' AND '${endDate}'
+GROUP BY
+    MOVTO.CODPRODUTO,
+    MOVTO.DESCRICAO,
+	OPPROD.UNIDADE,
+    CAST(OP.DTPREVISAO AS DATE), 
+    PROD.IDX_LINHA
+ORDER BY 
+    MOVTO.DESCRICAO, 
+    CAST(OP.DTPREVISAO AS DATE); -- Agora, DTPREVISAO também está no GROUP BY
+    `);
+
+    res.json(products.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(`<p>Erro: ${err.message}</p>`);
+  }
+});
+
+
+
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
