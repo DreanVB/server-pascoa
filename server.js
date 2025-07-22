@@ -70,6 +70,35 @@ app.get('/documentos-movimentos', async (req, res) => {
     const resultItens = await sql.query`
       SELECT 
     T1.PK_DOCTOPED,
+    T2.PK_MOVTOPED,
+    T1.TPDOCTO,
+    T1.DOCUMENTO,
+    T1.NOME,
+    T1.DTPREVISAO,
+    T1.CNPJCPF,
+    T2.RDX_DOCTOPED AS RDX_DOCTOPED,
+    T2.DESCRICAO,
+    T2.UNIDADE,
+    T2.L_QUANTIDADE,
+    SUM(COALESCE(T4.QUANTIDADE, 0)) AS AJUSTE,  -- Somando a quantidade ajustada
+	T2.L_QUANTIDADE + SUM(COALESCE(T4.QUANTIDADE, 0)) AS QUANTIDADE_AJUSTADA,
+    SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS AJUSTE_PRECO,  -- Multiplicando a quantidade pelo preço
+    T2.L_PRECOTOTAL + SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS L_PRECOTOTAL_AJUSTADO,  -- Soma ao L_PRECOTOTAL
+    T2.L_PRECOTOTAL,
+	T3.CODPRODUTO,
+    T3.IDX_NEGOCIO,
+    T3.IDX_LINHA
+FROM TPADOCTOPED T1
+JOIN TPAMOVTOPED T2 ON T1.PK_DOCTOPED = T2.RDX_DOCTOPED
+JOIN TPAPRODUTO T3 ON T3.CODPRODUTO = T2.CODPRODUTO
+LEFT JOIN TPAAJUSTEPEDITEM T4 ON T4.IDX_MOVTOPED = T2.PK_MOVTOPED
+WHERE T1.TPDOCTO IN ('OR', 'EC')
+  AND T3.IDX_NEGOCIO IN ('Produtos acabados', 'Desativados')
+  AND T1.SITUACAO IN ('Z','B','V')
+  AND CONVERT(DATE, T1.DTPREVISAO) BETWEEN ${dataInicio} AND ${dataFim}  -- Ajuste com datas de intervalo
+GROUP BY
+    T1.PK_DOCTOPED,
+    T2.PK_MOVTOPED,
     T1.TPDOCTO,
     T1.DOCUMENTO,
     T1.NOME,
@@ -83,18 +112,11 @@ app.get('/documentos-movimentos', async (req, res) => {
     T3.CODPRODUTO,
     T3.IDX_NEGOCIO,
     T3.IDX_LINHA
-FROM TPADOCTOPED T1
-JOIN TPAMOVTOPED T2 ON T1.PK_DOCTOPED = T2.RDX_DOCTOPED
-JOIN TPAPRODUTO T3 ON T3.CODPRODUTO = T2.CODPRODUTO
-WHERE T1.TPDOCTO IN ('OR', 'EC')
-  AND T3.IDX_NEGOCIO IN ('Produtos acabados', 'Desativados')
-  And T1.SITUACAO IN ('Z','B','V')
-  AND CONVERT(DATE, T1.DTPREVISAO) BETWEEN ${dataInicio} AND ${dataFim}  -- Ajuste com datas de intervalo
-  ORDER BY T1.PK_DOCTOPED DESC
+ORDER BY T1.PK_DOCTOPED DESC
   `;
 
-  
-  const resultPedidos = await sql.query`SELECT DISTINCT
+
+    const resultPedidos = await sql.query`SELECT DISTINCT
   T1.DOCUMENTO,
   T1.NOME,
   T1.CNPJCPF,
@@ -112,7 +134,7 @@ ORDER BY T1.DTPREVISAO
 `;
 
     res.json({
-      itens: resultItens.recordset,      
+      itens: resultItens.recordset,
       pedidos: resultPedidos.recordset
     });
   } catch (err) {
