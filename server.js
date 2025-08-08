@@ -20,7 +20,7 @@ const config = {
     trustServerCertificate: true,
   },
 };
-const db = new sqlite3.Database('etiquetas.db', (err) => {
+const db = new sqlite3.Database(SQLITE_DATABASE_PATH, (err) => {
   if (err) {
     console.error('Erro ao conectar ao SQLite:', err.message);
   } else {
