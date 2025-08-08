@@ -9,7 +9,7 @@ RUN apk add --no-cache python3 make g++ \
   && apk del python3 make g++  # clean up after install
 
 # Copy your server file
-COPY server.js .
+COPY server.js server-rd.js .
 
 # Expose your app's port
 EXPOSE 4000
