@@ -20,7 +20,7 @@ const config = {
     trustServerCertificate: true,
   },
 };
-const db = new sqlite3.Database(SQLITE_DATABASE_PATH, (err) => {
+const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
   if (err) {
     console.error('Erro ao conectar ao SQLite:', err.message);
   } else {
@@ -746,7 +746,43 @@ app.get('/rd/usuarios', async (req, res) => {
 });
 
 app.get('/rd/leads', async (req, res) => {
-  const url = `https://crm.rdstation.com/api/v1/deals?token=${accessToken}`;
+
+  const lead = req.body;
+
+  let teamId;
+  try {
+    const urlUsuario = `https://crm.rdstation.com/api/v1/users/${lead.id}?token=${accessToken}`;
+    const response = await fetch(urlUsuario, { method: 'GET', headers: { accept: 'application/json' } });
+    const data = await response.json();
+    
+    if (!data.teams || data.teams.length === 0) {
+      throw new Error('Usuário não possui equipe associada');
+    }
+
+    teamId = data.teams[0].id;
+  } catch (error) {
+    console.error('Erro ao buscar o team_id:', error);
+    return res.status(500).json({ error: 'Erro ao buscar o team_id' });
+  }
+
+  // Escolhe o funil de acordo com o time
+  let deal_stage_id;
+  switch (teamId) {
+    case '68233d496e3d40001f69ce70': // Social
+      deal_stage_id = '67f98dd7e5c803001ee656d5';
+      break;
+    case '6824229dc712fc0028f0ede8': // Corporativo
+      deal_stage_id = '681d05b48bdc4d0014df0178';
+      break;
+    case '682422a65ec7b6002702afef': // Encomendas
+      deal_stage_id = '681d05ceabfac8001b21251c';
+      break;
+    default:
+      console.error(`Team ID ${teamId} não reconhecido.`);
+      return res.status(400).json({ error: 'Team ID inválido' });
+  }
+
+  const url = `https://crm.rdstation.com/api/v1/deals?page=${lead.page}&limit=20&user_id=${lead.id}&deal_stage_id=${deal_stage_id}&token=${accessToken}`;
   const options = {
     method: 'GET',
     headers: {
