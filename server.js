@@ -746,12 +746,12 @@ app.get('/rd/usuarios', async (req, res) => {
 });
 
 app.get('/rd/leads', async (req, res) => {
-
-  const lead = req.body;
+  const { user_id, page, next_page } = req.query;
+  console.log("Página recebida:", page);
 
   let teamId;
   try {
-    const urlUsuario = `https://crm.rdstation.com/api/v1/users/${lead.id}?token=${accessToken}`;
+    const urlUsuario = `https://crm.rdstation.com/api/v1/users/${user_id}?token=${accessToken}`;
     const response = await fetch(urlUsuario, { method: 'GET', headers: { accept: 'application/json' } });
     const data = await response.json();
     
@@ -782,23 +782,16 @@ app.get('/rd/leads', async (req, res) => {
       return res.status(400).json({ error: 'Team ID inválido' });
   }
 
-  const url = `https://crm.rdstation.com/api/v1/deals?page=${lead.page}&limit=20&user_id=${lead.id}&deal_stage_id=${deal_stage_id}&token=${accessToken}`;
-  const options = {
-    method: 'GET',
-    headers: {
-      'accept': 'application/json',
-    },
-  };
+  const url = `https://crm.rdstation.com/api/v1/deals?page=${page}&limit=20&user_id=${user_id}&deal_stage_id=${deal_stage_id}&next_page=${next_page}&token=${accessToken}`;
 
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(url, { method: 'GET', headers: { 'accept': 'application/json' } });
 
     if (!response.ok) {
       throw new Error(`Erro ao buscar dados: ${response.statusText}`);
     }
 
     const data = await response.json();
-
     res.json(data);
   } catch (err) {
     res.status(500).send(`<p>Erro: ${err.message}</p>`);
