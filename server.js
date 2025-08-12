@@ -317,6 +317,68 @@ GROUP BY
   }
 });
 
+app.get('/api/produtosforno/:codigoEvento', async (req, res) => {
+  const { codigoEvento } = req.params;
+  try {
+    await sql.connect(config);
+    const result = await sql.query(`
+    SELECT
+    T1.PK_DOCTOPED,
+    T2.PK_MOVTOPED,
+    T1.TPDOCTO,
+    T1.DOCUMENTO,
+    T1.NOME,
+    T1.DTPREVISAO,
+    T1.CNPJCPF,
+    T2.RDX_DOCTOPED AS RDX_DOCTOPED,
+    T2.DESCRICAO,
+    T2.UNIDADE,
+    T3.IDX_CLASSIFICACAO,
+    T2.L_QUANTIDADE,
+    SUM(COALESCE(T4.QUANTIDADE, 0)) AS AJUSTE,  -- Somando a quantidade ajustada
+T2.L_QUANTIDADE + SUM(COALESCE(T4.QUANTIDADE, 0)) AS QUANTIDADE_AJUSTADA,
+    SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS AJUSTE_PRECO,  -- Multiplicando a quantidade pelo preço
+    T2.L_PRECOTOTAL + SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS L_PRECOTOTAL_AJUSTADO,  -- Soma ao L_PRECOTOTAL
+    T2.L_PRECOTOTAL,
+T3.CODPRODUTO,
+    T3.IDX_NEGOCIO,
+    T3.IDX_LINHA,
+    EVORC.CONVIDADOS  
+FROM TPADOCTOPED T1
+JOIN TPAMOVTOPED T2 ON T1.PK_DOCTOPED = T2.RDX_DOCTOPED
+JOIN TPAPRODUTO T3 ON T3.CODPRODUTO = T2.CODPRODUTO
+JOIN TPAEVENTOORC AS EVORC ON EVORC.PK_EVENTOORC = T1.IDX_DOCTOEVENTO
+LEFT JOIN TPAAJUSTEPEDITEM T4 ON T4.IDX_MOVTOPED = T2.PK_MOVTOPED
+WHERE T1.TPDOCTO IN ('OR')
+  AND T1.SITUACAO IN ('Z','B','V')
+  AND T3.IDX_NEGOCIO = 'Produtos acabados'
+  AND T1.DOCUMENTO = '${codigoEvento}'
+GROUP BY
+    T1.PK_DOCTOPED,
+    T2.PK_MOVTOPED,
+    T1.TPDOCTO,
+    T1.DOCUMENTO,
+    T1.NOME,
+    T1.DTPREVISAO,
+    T1.CNPJCPF,
+    T2.RDX_DOCTOPED,
+    T2.DESCRICAO,
+    T2.UNIDADE,
+    T2.L_QUANTIDADE,
+    T2.L_PRECOTOTAL,
+    T3.CODPRODUTO,
+    T3.IDX_NEGOCIO,
+    T3.IDX_LINHA,
+    T3.IDX_CLASSIFICACAO,
+    EVORC.CONVIDADOS
+ORDER BY T2.DESCRICAO DESC`
+    );
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/produtos', async (req, res) => {
   try {
     await sql.connect(config);
