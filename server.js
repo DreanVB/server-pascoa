@@ -6,6 +6,7 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 
+
 app.use(cors());
 app.use(express.json());
 
@@ -20,13 +21,13 @@ const config = {
     trustServerCertificate: true,
   },
 };
-const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
-  if (err) {
-    console.error('Erro ao conectar ao SQLite:', err.message);
-  } else {
-    console.log('✅ Conectado ao banco SQLite');
-  }
-});
+// const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
+//   if (err) {
+//     console.error('Erro ao conectar ao SQLite:', err.message);
+//   } else {
+//     console.log('✅ Conectado ao banco SQLite');
+//   }
+// });
 
 
 app.get('/healthcheck', (req, res) => {
@@ -816,7 +817,7 @@ app.get('/rd/leads', async (req, res) => {
     const urlUsuario = `https://crm.rdstation.com/api/v1/users/${user_id}?token=${accessToken}`;
     const response = await fetch(urlUsuario, { method: 'GET', headers: { accept: 'application/json' } });
     const data = await response.json();
-    
+
     if (!data.teams || data.teams.length === 0) {
       throw new Error('Usuário não possui equipe associada');
     }
@@ -915,6 +916,7 @@ app.post('/rd/criar-negociacao', async (req, res) => {
       console.error(`Team ID ${team_id} não reconhecido. Verifique os valores.`);
       deal_stage_id = null;
   }
+  const [day, month, year] = negociacaoBase.dataEvento.split('/').map(Number);
   const url = `https://crm.rdstation.com/api/v1/deals?token=${accessToken}`;
   try {
 
@@ -929,10 +931,12 @@ app.post('/rd/criar-negociacao', async (req, res) => {
         campaign: { _id: '67f98d5eaf88a40018d1490a' },
         contacts: [
           {
+            birthday: { day, month, year }, // já convertido do formato dd/mm/yyyy
             emails: [{ email: negociacaoBase.email }],
             phones: [{ phone: negociacaoBase.telefone }],
             name: negociacaoBase.contato
-          }
+
+          },
         ],
         deal: {
           deal_custom_fields: [
@@ -953,6 +957,7 @@ app.post('/rd/criar-negociacao', async (req, res) => {
 
     const negotiationData = await response.json();
     const dealId = negotiationData.id;
+    console.log(negotiationData)
 
     // Agora adiciona todos os documentos como produtos à negociação
     const results = [];
@@ -1116,6 +1121,24 @@ app.put('/rd/atualizar-negociacao', async (req, res) => {
     console.error('Erro geral:', error);
     res.status(500).json({ error: 'Erro ao atualizar negociação ou adicionar produtos' });
   }
+
+  const urlContato = `https://crm.rdstation.com/api/v1/deals/${negociacaoBase.deal_id}/contacts?token=6839ba3ee7c1930014ae76ba`;
+  const optionsContato = { method: 'GET', headers: { accept: 'application/json' } };
+  const response = await fetch(urlContato, optionsContato);
+  const contato = await response.json();
+
+  const urlAttContato = `https://crm.rdstation.com/api/v1/contacts/${contato.contacts[0].id}?token=6839ba3ee7c1930014ae76ba`;
+  const optionsAttContato = {
+    method: 'PUT',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify({ contact: { birthday: { day, month, year } } })
+  };
+
+  fetch(urlAttContato, optionsAttContato)
+    .then(res => res.json())
+    .then(json => console.log(json))
+    .catch(err => console.error(err));
+
 });
 
 
