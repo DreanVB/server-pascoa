@@ -21,13 +21,13 @@ const config = {
     trustServerCertificate: true,
   },
 };
-// const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
-//   if (err) {
-//     console.error('Erro ao conectar ao SQLite:', err.message);
-//   } else {
-//     console.log('✅ Conectado ao banco SQLite');
-//   }
-// });
+const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
+  if (err) {
+    console.error('Erro ao conectar ao SQLite:', err.message);
+  } else {
+    console.log('✅ Conectado ao banco SQLite');
+  }
+});
 
 
 app.get('/healthcheck', (req, res) => {
