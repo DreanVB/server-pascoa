@@ -336,6 +336,7 @@ app.get('/api/produtosforno/:codigoEvento', async (req, res) => {
     T2.UNIDADE,
     T3.IDX_CLASSIFICACAO,
     T2.L_QUANTIDADE,
+    T1.TEXTO,
     SUM(COALESCE(T4.QUANTIDADE, 0)) AS AJUSTE,  -- Somando a quantidade ajustada
 T2.L_QUANTIDADE + SUM(COALESCE(T4.QUANTIDADE, 0)) AS QUANTIDADE_AJUSTADA,
     SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS AJUSTE_PRECO,  -- Multiplicando a quantidade pelo preço
@@ -360,6 +361,7 @@ GROUP BY
     T1.TPDOCTO,
     T1.DOCUMENTO,
     T1.NOME,
+    T1.TEXTO,
     T1.DTPREVISAO,
     T1.CNPJCPF,
     T2.RDX_DOCTOPED,
