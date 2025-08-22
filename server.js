@@ -1128,6 +1128,7 @@ app.put('/rd/atualizar-negociacao', async (req, res) => {
   const optionsContato = { method: 'GET', headers: { accept: 'application/json' } };
   const response = await fetch(urlContato, optionsContato);
   const contato = await response.json();
+  const [day, month, year] = negociacaoBase.dataEvento.split('/').map(Number);
 
   const urlAttContato = `https://crm.rdstation.com/api/v1/contacts/${contato.contacts[0].id}?token=6839ba3ee7c1930014ae76ba`;
   const optionsAttContato = {
