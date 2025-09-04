@@ -699,6 +699,91 @@ ORDER BY
 });
 
 
+app.get('/gestao-de-orcamento', async (req, res) => {
+  const { tipoData, dataInicial, dataFinal } = req.query;
+
+  if (!tipoData || !dataInicial || !dataFinal) {
+    return res.status(400).json({ error: "Informe tipoData, dataInicial e dataFinal" });
+  }
+
+  // Garantir que só aceita "DTPREVISAO" ou "DTINC"
+  const colunaData = tipoData === "DTPREVISAO" ? "DTPREVISAO" : "DTINC";
+
+  const query = `
+    SELECT
+      T1.DOCUMENTO,
+  	  EVE.DESCRICAO,
+      T1.IDX_VENDEDOR1,
+      FUNC.NOMEINTERNO,
+      T1.SITUACAO,
+      T1.NOME,
+      T1.CNPJCPF,
+      T1.DTEVENTO,
+      T1.DTINC,
+      T1.DTALT,
+      t1.CIDADE,
+      t1.UF,
+      T1.CONTATO,
+      T1.TELEFONE,
+      EVENTO.DESCRICAO,
+      EVENTO.LOCAL,
+      T1.EMAIL,
+      cont.DTINC,
+  	  CONT.DTINICIO,
+      T1.TPDOCTO,
+      EVENTO.CONVIDADOS,
+      T1.TOTALDOCTO,
+      T1.TOTALDOCTO + ISNULL(SUM(T2.TOTALVALOR), 0) AS AJUSTE_TOTAL
+    FROM TPADOCTOPED T1
+    LEFT JOIN TPAAJUSTEPED T2 ON T2.RDX_DOCTOPED = T1.PK_DOCTOPED
+    JOIN TPAFUNCIONARIO FUNC ON T1.IDX_VENDEDOR1 = FUNC.PK_FUNCIONARIO
+    LEFT JOIN TPAEVENTOORC EVENTO ON EVENTO.PK_EVENTOORC = T1.IDX_DOCTOEVENTO
+    LEFT join TPACONTRATOMOV CONTMOV ON CONTMOV.PK_CONTRATOMOV = T1.IDX_CONTRATOMOV
+    left join TPACONTRATO CONT on CONT.PK_CONTRATO = CONTMOV.RDX_CONTRATO
+    	left join TPAEVENTO EVE ON EVE.PK_EVENTO = EVENTO.IDX_EVENTO 
+    WHERE T1.TPDOCTO IN ('OR', 'EC')
+      AND CONVERT(DATE, T1.${colunaData}) BETWEEN @dataInicial AND @dataFinal
+      AND T1.NOME != 'Contato'
+    GROUP BY 
+      T1.DOCUMENTO,
+	    EVE.DESCRICAO,
+      T1.IDX_VENDEDOR1,
+      FUNC.NOMEINTERNO,
+      T1.SITUACAO,
+      T1.NOME,
+      T1.CIDADE,
+      t1.UF,
+      T1.CONTATO,
+      T1.TELEFONE,
+      T1.EMAIL,
+      T1.CNPJCPF,
+      T1.DTEVENTO,
+      EVENTO.DESCRICAO,
+      EVENTO.LOCAL,
+      T1.DTINC,
+      T1.DTALT,
+  	  cont.DTINC,
+      CONT.DTINICIO,
+      T1.TPDOCTO,
+      EVENTO.CONVIDADOS,
+      T1.TOTALDOCTO
+  `;
+
+  try {
+    const pool = await sql.connect();
+    const result = await pool.request()
+      .input("dataInicial", sql.Date, dataInicial)
+      .input("dataFinal", sql.Date, dataFinal)
+      .query(query);
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error("Erro ao executar query:", err);
+    res.status(500).json({ error: "Erro ao buscar dados" });
+  }
+});
+
+
 
 
 
