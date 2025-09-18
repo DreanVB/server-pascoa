@@ -1229,6 +1229,126 @@ app.put('/rd/atualizar-negociacao', async (req, res) => {
 
 });
 
+app.get('/separacao-de-materiais/buscar-doc-sep', async (req, res) => {
+  const { data } = req.query;
+
+  try {
+    if (!data) {
+      return res.status(400).json({ error: 'Parâmetro "data" é obrigatório' });
+    }
+
+    // Cria e configura a consulta com parâmetros
+    const query = `
+      SELECT
+	DOC.IDX_VENDEDOR1
+	  ,FUNC.NOMEINTERNO
+	  ,DOC.TPDOCTO
+	  ,DOC.NOME
+	  ,DOC.DOCUMENTO
+	  ,DOC.DTEVENTO
+	  ,doc.TOTALDOCTO
+	  ,doc.TOTALDOCTO + ISNULL(SUM(AJUST.TOTALVALOR), 0) AS AJUSTE_TOTAL  -- Somando o TOTALDOCTO ao valor do ajuste, tratando nulos
+    ,EVENTO.CONVIDADOS
+    FROM TPADOCTOPED DOC
+  LEFT JOIN TPAFUNCIONARIO FUNC ON FUNC.PK_FUNCIONARIO = DOC.IDX_VENDEDOR1
+  LEFT JOIN TPAAJUSTEPED AJUST ON AJUST.RDX_DOCTOPED = DOC.PK_DOCTOPED
+  LEFT JOIN TPAEVENTOORC EVENTO ON EVENTO.PK_EVENTOORC = DOC.IDX_DOCTOEVENTO
+  WHERE DOC.SITUACAO IN ('Z','V','B')
+  AND DOC.TPDOCTO ='OR'
+  and CONVERT(DATE, doc.DTEVENTO) = @data
+  GROUP BY 
+  DOC.IDX_VENDEDOR1
+	  ,FUNC.NOMEINTERNO
+	  ,DOC.TPDOCTO
+	  ,DOC.NOME
+	  ,DOC.DOCUMENTO
+	  ,DOC.DTEVENTO
+	  ,doc.TOTALDOCTO
+    ,EVENTO.CONVIDADOS
+  ORDER BY DTEVENTO DESC
+    `;
+
+    const request = new sql.Request();
+    request.input('data', sql.VarChar, data);  // Use o tipo apropriado conforme o banco
+
+    const result = await request.query(query);
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.error('Erro ao buscar data:', err);
+    res.status(500).send(`<p>Erro interno: ${err.message}</p>`);
+  }
+});
+app.get('/separacao-de-materiais/buscar-materiais', async (req, res) => {
+  const { documento } = req.query;
+
+  try {
+    if (!documento) {
+      return res.status(400).json({ error: 'Parâmetro "documento" é obrigatório' });
+    }
+
+    // Cria e configura a consulta com parâmetros
+    const query = `
+      SELECT 
+    T1.PK_DOCTOPED,
+    T2.PK_MOVTOPED,
+    T1.TPDOCTO,
+    T1.DOCUMENTO,
+    T1.NOME,
+    T1.DTPREVISAO,
+    T1.CNPJCPF,
+    T2.RDX_DOCTOPED AS RDX_DOCTOPED,
+    T2.DESCRICAO,
+    T2.UNIDADE,
+    T2.L_QUANTIDADE,
+    SUM(COALESCE(T4.QUANTIDADE, 0)) AS AJUSTE,  -- Somando a quantidade ajustada
+	T2.L_QUANTIDADE + SUM(COALESCE(T4.QUANTIDADE, 0)) AS QUANTIDADE_AJUSTADA,
+    SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS AJUSTE_PRECO,  -- Multiplicando a quantidade pelo preço
+    T2.L_PRECOTOTAL + SUM(COALESCE(T4.QUANTIDADE, 0) * T4.PRECO) AS L_PRECOTOTAL_AJUSTADO,  -- Soma ao L_PRECOTOTAL
+    T2.L_PRECOTOTAL,
+	T3.CODPRODUTO,
+    T3.IDX_NEGOCIO,
+    T3.IDX_LINHA
+FROM TPADOCTOPED T1
+JOIN TPAMOVTOPED T2 ON T1.PK_DOCTOPED = T2.RDX_DOCTOPED
+JOIN TPAPRODUTO T3 ON T3.CODPRODUTO = T2.CODPRODUTO
+LEFT JOIN TPAAJUSTEPEDITEM T4 ON T4.IDX_MOVTOPED = T2.PK_MOVTOPED
+WHERE T1.TPDOCTO IN ('OR')
+  AND T3.IDX_NEGOCIO IN ('Bebidas','Locação de Materiais')
+  AND T1.SITUACAO IN ('Z','B','V')
+AND T1.DOCUMENTO = @documento 
+	
+GROUP BY
+    T1.PK_DOCTOPED,
+    T2.PK_MOVTOPED,
+    T1.TPDOCTO,
+    T1.DOCUMENTO,
+    T1.NOME,
+    T1.DTPREVISAO,
+    T1.CNPJCPF,
+    T2.RDX_DOCTOPED,
+    T2.DESCRICAO,
+    T2.UNIDADE,
+    T2.L_QUANTIDADE,
+    T2.L_PRECOTOTAL,
+    T3.CODPRODUTO,
+    T3.IDX_NEGOCIO,
+    T3.IDX_LINHA
+ORDER BY T3.IDX_NEGOCIO, T3.IDX_LINHA
+    `;
+
+    const request = new sql.Request();
+    request.input('documento', sql.VarChar, documento);  // Use o tipo apropriado conforme o banco
+
+    const result = await request.query(query);
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.error('Erro ao buscar documento:', err);
+    res.status(500).send(`<p>Erro interno: ${err.message}</p>`);
+  }
+});
+
 
 
 app.listen(port, () => {
