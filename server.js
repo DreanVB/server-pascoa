@@ -21,13 +21,13 @@ const config = {
     trustServerCertificate: true,
   },
 };
-const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
-  if (err) {
-    console.error('Erro ao conectar ao SQLite:', err.message);
-  } else {
-    console.log('✅ Conectado ao banco SQLite');
-  }
-});
+// const db = new sqlite3.Database(process.env.SQLITE_DATABASE_PATH, (err) => {
+//   if (err) {
+//     console.error('Erro ao conectar ao SQLite:', err.message);
+//   } else {
+//     console.log('✅ Conectado ao banco SQLite');
+//   }
+// });
 
 
 app.get('/healthcheck', (req, res) => {
@@ -1249,10 +1249,23 @@ app.get('/separacao-de-materiais/buscar-doc-sep', async (req, res) => {
 	  ,doc.TOTALDOCTO
 	  ,doc.TOTALDOCTO + ISNULL(SUM(AJUST.TOTALVALOR), 0) AS AJUSTE_TOTAL  -- Somando o TOTALDOCTO ao valor do ajuste, tratando nulos
     ,EVENTO.CONVIDADOS
+    ,EVE.DESCRICAO
+    ,EVENTO.LOCAL
+    ,DOC.TEXTO
+    ,DOC.TXTHISTORICO
+    ,DOC.TXTCONCLUSAO
+    ,CAD.DDD1
+    ,CAD.TELEFONE1
+    ,CAD.TPTELEFONE1
+    ,CAD.DDD2
+    ,CAD.TELEFONE2
+    ,CAD.TPTELEFONE2
     FROM TPADOCTOPED DOC
   LEFT JOIN TPAFUNCIONARIO FUNC ON FUNC.PK_FUNCIONARIO = DOC.IDX_VENDEDOR1
   LEFT JOIN TPAAJUSTEPED AJUST ON AJUST.RDX_DOCTOPED = DOC.PK_DOCTOPED
   LEFT JOIN TPAEVENTOORC EVENTO ON EVENTO.PK_EVENTOORC = DOC.IDX_DOCTOEVENTO
+  left join TPAEVENTO EVE ON EVE.PK_EVENTO = EVENTO.IDX_EVENTO
+  left join TPACADASTRO CAD ON DOC.IDX_ENTIDADE = CAD.PK_CADASTRO 
   WHERE DOC.SITUACAO IN ('Z','V','B')
   AND DOC.TPDOCTO ='OR'
   and CONVERT(DATE, doc.DTEVENTO) = @data
@@ -1265,6 +1278,17 @@ app.get('/separacao-de-materiais/buscar-doc-sep', async (req, res) => {
 	  ,DOC.DTEVENTO
 	  ,doc.TOTALDOCTO
     ,EVENTO.CONVIDADOS
+    ,EVE.DESCRICAO
+    ,EVENTO.LOCAL
+    ,DOC.TEXTO
+    ,DOC.TXTHISTORICO
+    ,DOC.TXTCONCLUSAO
+    ,CAD.DDD1
+    ,CAD.TELEFONE1
+    ,CAD.TPTELEFONE1
+    ,CAD.DDD2
+    ,CAD.TELEFONE2
+    ,CAD.TPTELEFONE2
   ORDER BY DTEVENTO DESC
     `;
 
