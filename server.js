@@ -718,7 +718,7 @@ app.get('/gestao-de-orcamento', async (req, res) => {
       T1.SITUACAO,
       T1.NOME,
       T1.CNPJCPF,
-      T1.DTEVENTO,
+      T1.DTPREVISAO,
       T1.DTINC,
       T1.DTALT,
       t1.CIDADE,
