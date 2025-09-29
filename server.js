@@ -757,7 +757,7 @@ app.get('/gestao-de-orcamento', async (req, res) => {
       T1.TELEFONE,
       T1.EMAIL,
       T1.CNPJCPF,
-      T1.DTEVENTO,
+      T1.DTPREVISAO,
       EVENTO.DESCRICAO,
       EVENTO.LOCAL,
       T1.DTINC,
